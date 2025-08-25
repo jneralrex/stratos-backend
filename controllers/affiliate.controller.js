@@ -6,8 +6,9 @@ const getAffiliateEarnings = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const commissions = await Commission.find({ user: userId });
-
+    const commissions = await Commission.find({ user: userId })
+      .populate("referredUser", "username email") 
+     
     const totalEarnings = commissions.reduce((sum, c) => sum + c.amount, 0);
     const approvedEarnings = commissions
       .filter(c => c.status === "approved")
@@ -22,7 +23,7 @@ const getAffiliateEarnings = async (req, res) => {
         totalEarnings,
         approvedEarnings,
         pendingEarnings,
-        commissions, // optional: return all commission records
+        commissions, 
       }
     });
   } catch (error) {
@@ -30,6 +31,7 @@ const getAffiliateEarnings = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 // ✅ Get affiliate referrals
 const getAffiliateReferrals = async (req, res) => {
