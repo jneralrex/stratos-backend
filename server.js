@@ -25,7 +25,7 @@ app.use(express.urlencoded({ extended: true })); // Supports form submissions
 
 
 app.use(cors({ 
-    origin: "https://stratoslab.vercel.app/",  
+    origin: "*",  
     credentials: true 
 }));
 app.use(cookieParser());

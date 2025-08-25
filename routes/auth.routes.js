@@ -22,5 +22,4 @@ router.post("/confirm-delete", authenticate, confirmDeleteAccount);        // Co
 
 
 
-
 module.exports = router;
