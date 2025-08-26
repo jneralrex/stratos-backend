@@ -25,7 +25,7 @@ app.use(express.urlencoded({ extended: true })); // Supports form submissions
 
 
 app.use(cors({ 
-    origin: "http://localhost:3000", 
+    origin: ["http://localhost:3000", "https://stratoslab.vercel.app"], 
     credentials: true 
 }));
 app.use(cookieParser());
