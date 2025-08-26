@@ -58,15 +58,17 @@ const signUp = async (req, res, next) => {
         }
 
         // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special character
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
+        // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char, and NO spaces
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])\S{8,}$/;
 
         if (!passwordRegex.test(password)) {
             throw new CustomError(
                 400,
-                "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+                "Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number, one special character (e.g., !@#$%^&*(),.?\":{}|<>), and must not contain spaces.",
                 "ValidationError"
             );
         }
+
 
 
         // ✅ Hash password
@@ -275,13 +277,11 @@ const signIn = async (req, res, next) => {
         if (!email) throw new CustomError(400, "Email is required", "ValidationError");
         if (!password) throw new CustomError(400, "Password is required", "ValidationError");
 
-    
+
         if (!email || !password) {
             throw new CustomError(400, "All fields are required", "ValidationError");
         }
-        if (!email.match(/^\S+@\S+\.\S+$/)) {
-            throw new CustomError(400, "Invalid email format", "ValidationError");
-        }
+
         const user = await User.findOne({ email }).select("+password +refreshToken");
 
         if (!user) throw new CustomError(404, "User not found", "ValidationError");
@@ -391,10 +391,17 @@ const resetPassword = async (req, res, next) => {
             throw new CustomError(400, "OTP expired or invalid", "ValidationError");
         }
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/; // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
+        // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char, and NO spaces
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])\S{8,}$/;
+
         if (!passwordRegex.test(newPassword)) {
-            throw new CustomError(400, "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number", "ValidationError");
+            throw new CustomError(
+                400,
+                "Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number, one special character (e.g., !@#$%^&*(),.?\":{}|<>), and must not contain spaces.",
+                "ValidationError"
+            );
         }
+
         // Check if OTP is expired
         if (Date.now() > user.otpExpiresAt) {
             await generateAndSendOTP(user);
@@ -435,16 +442,17 @@ const changePassword = async (req, res, next) => {
         if (!passwordMatch) throw new CustomError(400, "Old password is incorrect", "ValidationError");
 
 
-        // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special character
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
+        // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char, and NO spaces
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])\S{8,}$/;
 
         if (!passwordRegex.test(newPassword)) {
             throw new CustomError(
                 400,
-                "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+                "Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number, one special character (e.g., !@#$%^&*(),.?\":{}|<>), and must not contain spaces.",
                 "ValidationError"
             );
         }
+
 
 
         user.password = await bcrypt.hash(newPassword, 10);
