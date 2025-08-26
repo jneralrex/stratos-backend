@@ -57,15 +57,17 @@ const signUp = async (req, res, next) => {
             throw new CustomError(400, "Invalid email format", "ValidationError");
         }
 
-        // ✅ Validate password strength
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+        // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special character
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
+
         if (!passwordRegex.test(password)) {
             throw new CustomError(
                 400,
-                "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number",
+                "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character",
                 "ValidationError"
             );
         }
+
 
         // ✅ Hash password
         const passwordHash = await bcrypt.hash(password, 10);
@@ -98,7 +100,7 @@ const signUp = async (req, res, next) => {
             email,
             password: passwordHash,
             course: course || undefined,
-            role: safeRole, 
+            role: safeRole,
             otp: hashedOTP,
             otpExpiresAt,
             isVerified: false,
@@ -158,42 +160,42 @@ const signUp = async (req, res, next) => {
  *  USER REGISTRATION BY ADMIN
  *  =========================== */
 const createUserByAdmin = async (req, res, next) => {
-  try {
-    const { fullName, phoneNumber, countryOfResidence, username, email, password, role } = req.body;
+    try {
+        const { fullName, phoneNumber, countryOfResidence, username, email, password, role } = req.body;
 
-    // Only allow privileged roles here
-    if (!["salesRep", "superAdmin"].includes(role)) {
-      throw new CustomError(400, "Invalid role for admin creation", "ValidationError");
+        // Only allow privileged roles here
+        if (!["salesRep", "superAdmin"].includes(role)) {
+            throw new CustomError(400, "Invalid role for admin creation", "ValidationError");
+        }
+
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            throw new CustomError(400, "User already exists", "ValidationError");
+        }
+
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        const newUser = new User({
+            fullName,
+            phoneNumber,
+            countryOfResidence,
+            username,
+            email,
+            password: passwordHash,
+            role,
+            isVerified: true, // Admin-created users are verified by default
+        });
+
+        await newUser.save();
+
+        res.status(201).json({
+            success: true,
+            message: `${role} created successfully`,
+            data: { id: newUser._id, email: newUser.email, role: newUser.role }
+        });
+    } catch (err) {
+        next(err);
     }
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      throw new CustomError(400, "User already exists", "ValidationError");
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const newUser = new User({
-      fullName,
-      phoneNumber,
-      countryOfResidence,
-      username,
-      email,
-      password: passwordHash,
-      role,
-      isVerified: true, // Admin-created users are verified by default
-    });
-
-    await newUser.save();
-
-    res.status(201).json({
-      success: true,
-      message: `${role} created successfully`,
-      data: { id: newUser._id, email: newUser.email, role: newUser.role }
-    });
-  } catch (err) {
-    next(err);
-  }
 };
 
 
@@ -435,10 +437,17 @@ const changePassword = async (req, res, next) => {
         if (!passwordMatch) throw new CustomError(400, "Old password is incorrect", "ValidationError");
 
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/; // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
+        // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special character
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
+
         if (!passwordRegex.test(newPassword)) {
-            throw new CustomError(400, "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number", "ValidationError");
+            throw new CustomError(
+                400,
+                "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+                "ValidationError"
+            );
         }
+
 
         user.password = await bcrypt.hash(newPassword, 10);
         await user.save();
