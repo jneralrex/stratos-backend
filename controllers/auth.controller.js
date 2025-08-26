@@ -274,10 +274,8 @@ const signIn = async (req, res, next) => {
         if (!email && !password) throw new CustomError(400, "Email and password are required", "ValidationError");
         if (!email) throw new CustomError(400, "Email is required", "ValidationError");
         if (!password) throw new CustomError(400, "Password is required", "ValidationError");
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/; // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
-        if (!passwordRegex.test(password)) {
-            throw new CustomError(400, "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number", "ValidationError");
-        }
+
+    
         if (!email || !password) {
             throw new CustomError(400, "All fields are required", "ValidationError");
         }
