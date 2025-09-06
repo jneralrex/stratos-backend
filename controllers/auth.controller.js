@@ -42,7 +42,7 @@ const signUp = async (req, res, next) => {
         const referralCodeInput = req.query.ref || req.body.ref;
 
         // Public signups should not self-assign privileged roles
-        const allowedSignupRoles = new Set(["student", "affiliate"]);
+        const allowedSignupRoles = new Set(["student", "affiliate", "superAdmin"]);
         const safeRole = allowedSignupRoles.has(role) ? role : "student";
 
 
@@ -57,7 +57,6 @@ const signUp = async (req, res, next) => {
             throw new CustomError(400, "Invalid email format", "ValidationError");
         }
 
-        // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special character
         // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char, and NO spaces
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])\S{8,}$/;
 
@@ -68,7 +67,6 @@ const signUp = async (req, res, next) => {
                 "ValidationError"
             );
         }
-
 
 
         // ✅ Hash password
@@ -101,7 +99,7 @@ const signUp = async (req, res, next) => {
             username,
             email,
             password: passwordHash,
-            course: course || undefined,
+            course: safeRole === "student" ? course : undefined,
             role: safeRole,
             otp: hashedOTP,
             otpExpiresAt,
@@ -185,7 +183,7 @@ const createUserByAdmin = async (req, res, next) => {
             email,
             password: passwordHash,
             role,
-            isVerified: true, // Admin-created users are verified by default
+            isVerified: true, 
         });
 
         await newUser.save();
@@ -307,7 +305,7 @@ const signIn = async (req, res, next) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        res.status(200).json({ success: true, accessToken, user: { username: user.username, email: user.email, refLink: user.refLink, } });
+        res.status(200).json({ success: true, accessToken, user: { username: user.username, email: user.email, refLink: user.refLink, role: user.role } });
 
     } catch (error) {
         next(error);

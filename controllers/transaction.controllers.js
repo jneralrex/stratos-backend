@@ -7,7 +7,7 @@ const User = require("../models/user.model");
 const AFFILIATE_RATE = 0.1; // 10%
 const SALES_REP_RATE = 0.05; // 5%
 
-// ✅ Confirm Transaction + distribute commissions
+// Confirm Transaction + distribute commissions
 const confirmTransaction = async (req, res) => {
   try {
     const { transactionId } = req.params;
@@ -54,7 +54,7 @@ const confirmTransaction = async (req, res) => {
   }
 };
 
-// ✅ Reject Transaction
+// Reject Transaction
 const rejectTransaction = async (req, res) => {
   try {
     const { transactionId } = req.params;
@@ -74,7 +74,7 @@ const rejectTransaction = async (req, res) => {
   }
 };
 
-// ✅ Create Transaction
+// Create Transaction
 const createTransaction = async (req, res) => {
   try {
     const { studentId, amount } = req.body;
@@ -100,7 +100,7 @@ const createTransaction = async (req, res) => {
   }
 };
 
-// ✅ Update Transaction
+//  Update Transaction
 const updateTransaction = async (req, res) => {
   try {
     const { transactionId } = req.params;
@@ -126,7 +126,7 @@ const updateTransaction = async (req, res) => {
   }
 };
 
-// ✅ Delete Transaction
+//  Delete Transaction
 const deleteTransaction = async (req, res) => {
   try {
     const { transactionId } = req.params;
@@ -140,7 +140,7 @@ const deleteTransaction = async (req, res) => {
   }
 };
 
-// ✅ Get Transactions (all or by filter)
+//  Get Transactions (all or by filter)
 const getTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find().populate("student confirmedBy", "username email");
@@ -151,7 +151,7 @@ const getTransactions = async (req, res) => {
   }
 };
 
-// ✅ Get Transaction by ID (with ownership check)
+// Get Transaction by ID (with ownership check)
 const getTransactionById = async (req, res) => {
   try {
     const { transactionId } = req.params;
@@ -176,7 +176,7 @@ const getTransactionById = async (req, res) => {
 };
 
 
-// ✅ Get Transactions for Logged-in User (student dashboard)
+// Get Transactions for Logged-in User (student dashboard)
 const getTransactionsByUser = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -204,7 +204,7 @@ const getTransactionsByStatus = async (req, res) => {
   }
 };
 
-// ✅ Export all controllers
+// Export all controllers
 module.exports = {
   confirmTransaction,
   rejectTransaction,

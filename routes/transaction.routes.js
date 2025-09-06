@@ -9,7 +9,7 @@ const { uploadRecieptImage } = require("../utils/files/imagesUpload");
 router.post(
   "/",
   authenticate,
-  authorize("student", "admin"), // only students (or admins for testing) can create
+  authorize("student", "superAdmin"), // only students (or admins for testing) can create
   uploadRecieptImage.single("receipt"),
   createTransaction
 );
@@ -18,7 +18,7 @@ router.post(
 router.put(
   "/:transactionId",
   authenticate,
-  authorize("student", "admin"),
+  authorize("student", "superAdmin"),
  updateTransaction
 );
 
@@ -26,23 +26,23 @@ router.put(
 router.delete(
   "/:transactionId",
   authenticate,
-  authorize("admin"),
+  authorize("superAdmin"),
   deleteTransaction
 );
 
-// Confirm transaction (salesRep only)
+// Confirm transaction (salesRep and admin only)
 router.post(
   "/:transactionId/confirm",
   authenticate,
-  authorize("salesRep", "admin"),
+  authorize("salesRep", "superAdmin"),
   confirmTransaction
 );
 
-// Reject transaction (salesRep only)
+// Reject transaction (salesRep and admin only)
 router.post(
   "/:transactionId/reject",
   authenticate,
-  authorize("salesRep", "admin"),
+  authorize("salesRep", "superAdmin"),
   rejectTransaction
 );
 
@@ -50,7 +50,7 @@ router.post(
 router.get(
   "/",
   authenticate,
-  authorize("admin", "affiliate"),
+  authorize("superAdmin"),
   getTransactions
 );
 
@@ -58,7 +58,7 @@ router.get(
 router.get(
   "/:transactionId",
   authenticate,
-  authorize("admin", "salesRep", "student"),
+  authorize("student"),
   getTransactionById
 );
 
@@ -66,7 +66,7 @@ router.get(
 router.get(
   "/user/me",
   authenticate,
-  authorize("student", "admin"),
+  authorize("student"),
   getTransactionsByUser
 );
 
@@ -74,7 +74,7 @@ router.get(
 router.get(
   "/status/:status",
   authenticate,
-  authorize("admin", "salesRep"),
+  authorize("superAdmin", "salesRep"),
   getTransactionsByStatus
 );
 
