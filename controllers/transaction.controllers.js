@@ -75,30 +75,30 @@ const rejectTransaction = async (req, res) => {
 };
 
 // Create Transaction
-const createTransaction = async (req, res) => {
+const createTransaction = async (req, res, next) => {
   try {
-    const { studentId, amount } = req.body;
+    const { studentId, amount, receipt } = req.body;
+
     const student = await User.findById(studentId);
-    if (!student) return res.status(404).json({ success: false, message: "Student not found" });
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
 
     const transaction = new Transaction({
       student: student._id,
       amount,
-      receipt: req.file
-        ? {
-            url: req.file.path,
-            public_id: req.file.filename,
-          }
-        : undefined, // fallback if no file uploaded
+      course: student.course, 
+      receipt
     });
 
     await transaction.save();
-    return res.status(201).json({ success: true, transaction });
+
+    res.status(201).json({ success: true, data: transaction });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ success: false, message: "Server error" });
+    next(error);
   }
 };
+
 
 //  Update Transaction
 const updateTransaction = async (req, res) => {
@@ -143,7 +143,7 @@ const deleteTransaction = async (req, res) => {
 //  Get Transactions (all or by filter)
 const getTransactions = async (req, res) => {
   try {
-    const transactions = await Transaction.find().populate("student confirmedBy", "username email");
+    const transactions = await Transaction.find().populate("student confirmedBy", "username email course");
     return res.json({ success: true, transactions });
   } catch (error) {
     console.error(error);
@@ -180,7 +180,7 @@ const getTransactionById = async (req, res) => {
 const getTransactionsByUser = async (req, res) => {
   try {
     const userId = req.user._id;
-    const transactions = await Transaction.find({ student: userId }).populate("student confirmedBy", "username email");
+    const transactions = await Transaction.find({ student: userId }).populate("student confirmedBy", "username email course");
     return res.json({ success: true, transactions });
   } catch (error) {
     console.error(error);
@@ -196,7 +196,7 @@ const getTransactionsByStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid status" });
     }
 
-    const transactions = await Transaction.find({ status }).populate("student confirmedBy", "username email");
+    const transactions = await Transaction.find({ status }).populate("student confirmedBy", "username email course");
     return res.json({ success: true, transactions });
   } catch (error) {
     console.error(error);

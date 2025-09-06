@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const transactionSchema = new mongoose.Schema({
   student: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   amount: { type: Number, required: true },
+  course: { type: String, required: true }, 
   receipt: {
     url: { type: String },
     public_id: { type: String },
