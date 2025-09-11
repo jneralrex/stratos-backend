@@ -315,24 +315,60 @@ const signIn = async (req, res, next) => {
 /** ===========================
  *  REFRESH TOKEN
  *  =========================== */
+
+
 const refreshToken = async (req, res, next) => {
-    try {
-        const refreshToken = req.cookies.refreshToken;
-        if (!refreshToken) throw new CustomError(401, "No refresh token provided", "AuthorizationError");
-
-        const decoded = jwt.verify(refreshToken, config.refresh_secret);
-        const user = await User.findById(decoded.id);
-        if (!user || user.refreshToken !== refreshToken) throw new CustomError(403, "Invalid refresh token", "AuthorizationError");
-
-        // Generate new access token
-        const newAccessToken = jwt.sign({ id: user._id }, config.jwt_secret, { expiresIn: "15m" });
-
-        res.status(200).json({ success: true, accessToken: newAccessToken });
-
-    } catch (error) {
-        next(error);
+  try {
+    const tokenFromCookie = req.cookies.refreshToken;
+    if (!tokenFromCookie) {
+      throw new CustomError(401, "No refresh token provided", "AuthorizationError");
     }
+
+    // Verify token
+    const decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
+
+    // Find user and validate stored refresh token
+    const user = await User.findById(decoded.id);
+    if (!user || user.refreshToken !== tokenFromCookie) {
+      throw new CustomError(403, "Invalid refresh token", "AuthorizationError");
+    }
+
+    // Generate new access token
+    const newAccessToken = jwt.sign(
+      { id: user._id, role: user.role },
+      config.jwt_secret,
+      { expiresIn: "15m" }
+    );
+
+    // (Optional) Rotate refresh token for better security
+    const newRefreshToken = jwt.sign(
+      { id: user._id },
+      config.refresh_secret,
+      { expiresIn: "7d" }
+    );
+
+    user.refreshToken = newRefreshToken;
+    await user.save();
+
+    // Send tokens back
+    res
+      .cookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      })
+      .status(200)
+      .json({
+        success: true,
+        accessToken: newAccessToken,
+      });
+  } catch (error) {
+    next(error);
+  }
 };
+
+
 
 /** ===========================
  *  LOGOUT (INVALIDATE REFRESH TOKEN)
