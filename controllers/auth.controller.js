@@ -320,7 +320,6 @@ const signIn = async (req, res, next) => {
     }
 
     const user = await User.findOne({ email }).select("+password +refreshToken");
-
     if (!user) throw new CustomError(404, "User not found", "ValidationError");
     if (!user.isVerified) throw new CustomError(403, "Account not verified", "ValidationError");
 
@@ -328,28 +327,18 @@ const signIn = async (req, res, next) => {
     if (!passwordMatch) throw new CustomError(400, "Invalid credentials", "ValidationError");
 
     // Generate tokens
-    const accessToken = jwt.sign(
-      { id: user._id, role: user.role },
-      config.jwt_secret,
-      { expiresIn: "15m" }
-    );
+    const accessToken = jwt.sign({ id: user._id }, config.jwt_secret, { expiresIn: "15m" });
+    const refreshToken = jwt.sign({ id: user._id }, config.refresh_secret, { expiresIn: "7d" });
 
-    const refreshToken = jwt.sign(
-      { id: user._id },
-      config.refresh_secret,
-      { expiresIn: "7d" }
-    );
-
-    // Store refresh token in DB
+    // Save refresh token to DB
     user.refreshToken = refreshToken;
     await user.save();
 
-    // Send refresh token as HTTP-only cookie
-    const isProduction = process.env.NODE_ENV === "production";
+    // Send refresh token cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production", // must be true on Render
+      sameSite: "none", // 🔑 allow cross-domain (Vercel <-> Render)
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -357,7 +346,6 @@ const signIn = async (req, res, next) => {
       success: true,
       accessToken,
       user: {
-        id: user._id,
         username: user.username,
         email: user.email,
         refLink: user.refLink,
@@ -368,6 +356,7 @@ const signIn = async (req, res, next) => {
     next(error);
   }
 };
+
 
 /** ===========================
  *  REFRESH TOKEN
@@ -425,19 +414,14 @@ const refreshToken = async (req, res, next) => {
   try {
     const tokenFromCookie = req.cookies.refreshToken;
     if (!tokenFromCookie) {
-      return res.status(401).json({ success: false, message: "No refresh token provided" });
+      throw new CustomError(401, "No refresh token provided", "AuthorizationError");
     }
 
-    let decoded;
-    try {
-      decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
-    } catch (err) {
-      return res.status(403).json({ success: false, message: "Invalid or expired refresh token" });
-    }
-
+    const decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
     const user = await User.findById(decoded.id);
+
     if (!user || user.refreshToken !== tokenFromCookie) {
-      return res.status(403).json({ success: false, message: "Refresh token mismatch" });
+      throw new CustomError(403, "Invalid refresh token", "AuthorizationError");
     }
 
     // Rotate refresh token
@@ -445,28 +429,30 @@ const refreshToken = async (req, res, next) => {
     user.refreshToken = newRefreshToken;
     await user.save();
 
-    // New access token
+    // Issue new access token
     const newAccessToken = jwt.sign(
       { id: user._id, role: user.role },
       config.jwt_secret,
       { expiresIn: "15m" }
     );
 
-    // Send refresh cookie
-    const isProduction = process.env.NODE_ENV === "production";
+    // Send new refresh token cookie
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production", // must be true on Render
+      sameSite: "none", // 🔑 allow cross-domain
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.status(200).json({ success: true, accessToken: newAccessToken });
+    res.status(200).json({
+      success: true,
+      accessToken: newAccessToken,
+    });
   } catch (error) {
-    console.error("Refresh error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    next(error);
   }
 };
+
 
 
 
