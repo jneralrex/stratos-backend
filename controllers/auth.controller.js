@@ -267,49 +267,106 @@ const resendOTP = async (req, res, next) => {
 /** ===========================
  *  USER LOGIN (GENERATE TOKENS)
  *  =========================== */
+// const signIn = async (req, res, next) => {
+//     try {
+//         const { email, password } = req.body;
+
+//         if (!email && !password) throw new CustomError(400, "Email and password are required", "ValidationError");
+//         if (!email) throw new CustomError(400, "Email is required", "ValidationError");
+//         if (!password) throw new CustomError(400, "Password is required", "ValidationError");
+
+
+//         if (!email || !password) {
+//             throw new CustomError(400, "All fields are required", "ValidationError");
+//         }
+
+//         const user = await User.findOne({ email }).select("+password +refreshToken");
+
+//         if (!user) throw new CustomError(404, "User not found", "ValidationError");
+//         if (!user.isVerified) throw new CustomError(403, "Account not verified", "ValidationError");
+
+//         const passwordMatch = await bcrypt.compare(password, user.password);
+//         if (!passwordMatch) throw new CustomError(400, "Invalid credentials", "ValidationError");
+
+//         // Generate new tokens
+//         const accessToken = jwt.sign({ id: user._id }, config.jwt_secret, { expiresIn: "15m" });
+//         const refreshToken = jwt.sign({ id: user._id }, config.refresh_secret, { expiresIn: "7d" });
+
+//         // Store refresh token in DB
+//         user.refreshToken = refreshToken;
+//         await user.save();
+
+//         // Send refresh token as HTTP-only cookie
+//         const isProduction = process.env.NODE_ENV === "production";
+//         res.cookie("refreshToken", refreshToken, {
+//             httpOnly: true,
+//             secure: isProduction,
+//             sameSite: "Strict",
+//             maxAge: 7 * 24 * 60 * 60 * 1000
+//         });
+
+//         res.status(200).json({ success: true, accessToken, user: { username: user.username, email: user.email, refLink: user.refLink, role: user.role } });
+
+//     } catch (error) {
+//         next(error);
+//     }
+// };
 const signIn = async (req, res, next) => {
-    try {
-        const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-        if (!email && !password) throw new CustomError(400, "Email and password are required", "ValidationError");
-        if (!email) throw new CustomError(400, "Email is required", "ValidationError");
-        if (!password) throw new CustomError(400, "Password is required", "ValidationError");
-
-
-        if (!email || !password) {
-            throw new CustomError(400, "All fields are required", "ValidationError");
-        }
-
-        const user = await User.findOne({ email }).select("+password +refreshToken");
-
-        if (!user) throw new CustomError(404, "User not found", "ValidationError");
-        if (!user.isVerified) throw new CustomError(403, "Account not verified", "ValidationError");
-
-        const passwordMatch = await bcrypt.compare(password, user.password);
-        if (!passwordMatch) throw new CustomError(400, "Invalid credentials", "ValidationError");
-
-        // Generate new tokens
-        const accessToken = jwt.sign({ id: user._id }, config.jwt_secret, { expiresIn: "15m" });
-        const refreshToken = jwt.sign({ id: user._id }, config.refresh_secret, { expiresIn: "7d" });
-
-        // Store refresh token in DB
-        user.refreshToken = refreshToken;
-        await user.save();
-
-        // Send refresh token as HTTP-only cookie
-        const isProduction = process.env.NODE_ENV === "production";
-        res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: isProduction,
-            sameSite: "Strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
-
-        res.status(200).json({ success: true, accessToken, user: { username: user.username, email: user.email, refLink: user.refLink, role: user.role } });
-
-    } catch (error) {
-        next(error);
+    if (!email || !password) {
+      throw new CustomError(400, "Email and password are required", "ValidationError");
     }
+
+    const user = await User.findOne({ email }).select("+password +refreshToken");
+
+    if (!user) throw new CustomError(404, "User not found", "ValidationError");
+    if (!user.isVerified) throw new CustomError(403, "Account not verified", "ValidationError");
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) throw new CustomError(400, "Invalid credentials", "ValidationError");
+
+    // Generate tokens
+    const accessToken = jwt.sign(
+      { id: user._id, role: user.role },
+      config.jwt_secret,
+      { expiresIn: "15m" }
+    );
+
+    const refreshToken = jwt.sign(
+      { id: user._id },
+      config.refresh_secret,
+      { expiresIn: "7d" }
+    );
+
+    // Store refresh token in DB
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    // Send refresh token as HTTP-only cookie
+    const isProduction = process.env.NODE_ENV === "production";
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.status(200).json({
+      success: true,
+      accessToken,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        refLink: user.refLink,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 /** ===========================
@@ -317,52 +374,100 @@ const signIn = async (req, res, next) => {
  *  =========================== */
 
 
+// const refreshToken = async (req, res, next) => {
+//   try {
+//     const tokenFromCookie = req.cookies.refreshToken;
+//     if (!tokenFromCookie) {
+//       throw new CustomError(401, "No refresh token provided", "AuthorizationError");
+//     }
+
+//     const decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
+
+//     const user = await User.findById(decoded.id);
+//     if (!user || user.refreshToken !== tokenFromCookie) {
+//       throw new CustomError(403, "Invalid refresh token", "AuthorizationError");
+//     }
+
+//     // 🔑 Rotate refresh token
+//     const newRefreshToken = jwt.sign(
+//       { id: user._id },
+//       config.refresh_secret,
+//       { expiresIn: "7d" }
+//     );
+//     user.refreshToken = newRefreshToken;
+//     await user.save();
+
+//     // 🔑 Issue new access token
+//     const newAccessToken = jwt.sign(
+//       { id: user._id, role: user.role },
+//       config.jwt_secret,
+//       { expiresIn: "15m" }
+//     );
+
+//     // ✅ Send new refresh token as httpOnly cookie
+//    res.cookie("refreshToken", refreshToken, {
+//   httpOnly: true,
+//   secure: process.env.NODE_ENV === "production" ? true : false, 
+//   sameSite: process.env.NODE_ENV === "production" ? "Strict" : "None",
+//   maxAge: 7 * 24 * 60 * 60 * 1000,
+// });
+
+
+//     res.status(200).json({
+//       success: true,
+//       accessToken: newAccessToken,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 const refreshToken = async (req, res, next) => {
   try {
     const tokenFromCookie = req.cookies.refreshToken;
     if (!tokenFromCookie) {
-      throw new CustomError(401, "No refresh token provided", "AuthorizationError");
+      return res.status(401).json({ success: false, message: "No refresh token provided" });
     }
 
-    const decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
+    let decoded;
+    try {
+      decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
+    } catch (err) {
+      return res.status(403).json({ success: false, message: "Invalid or expired refresh token" });
+    }
 
     const user = await User.findById(decoded.id);
     if (!user || user.refreshToken !== tokenFromCookie) {
-      throw new CustomError(403, "Invalid refresh token", "AuthorizationError");
+      return res.status(403).json({ success: false, message: "Refresh token mismatch" });
     }
 
-    // 🔑 Rotate refresh token
-    const newRefreshToken = jwt.sign(
-      { id: user._id },
-      config.refresh_secret,
-      { expiresIn: "7d" }
-    );
+    // Rotate refresh token
+    const newRefreshToken = jwt.sign({ id: user._id }, config.refresh_secret, { expiresIn: "7d" });
     user.refreshToken = newRefreshToken;
     await user.save();
 
-    // 🔑 Issue new access token
+    // New access token
     const newAccessToken = jwt.sign(
       { id: user._id, role: user.role },
       config.jwt_secret,
       { expiresIn: "15m" }
     );
 
-    // ✅ Send new refresh token as httpOnly cookie
+    // Send refresh cookie
+    const isProduction = process.env.NODE_ENV === "production";
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({
-      success: true,
-      accessToken: newAccessToken,
-    });
+    return res.status(200).json({ success: true, accessToken: newAccessToken });
   } catch (error) {
-    next(error);
+    console.error("Refresh error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
 
 
 
