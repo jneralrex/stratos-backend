@@ -547,8 +547,8 @@ const refreshToken = async (req, res, next) => {
     // Send new refresh token cookie
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // must be true on Render
-      sameSite: "none", // allow cross-domain
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -557,9 +557,19 @@ const refreshToken = async (req, res, next) => {
       accessToken: newAccessToken,
     });
   } catch (error) {
-    next(error);
+    // handle jwt-specific errors
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ success: false, message: "Refresh token expired" });
+    }
+    if (error.name === "JsonWebTokenError") {
+      return res.status(403).json({ success: false, message: "Invalid refresh token" });
+    }
+
+    // fallback
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
 
 
 
