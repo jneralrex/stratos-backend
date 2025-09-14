@@ -458,20 +458,68 @@ const signIn = async (req, res, next) => {
 //   }
 // };
 
+
+
+
+
+// const refreshToken = async (req, res, next) => {
+//   try {
+//     const tokenFromCookie = req.cookies.refreshToken;
+//     if (!tokenFromCookie) {
+//     //   throw new CustomError(401, "No refresh token provided", "AuthorizationError");
+//      return res.status(401).json({ success: false, message: "No refresh token provided" });
+//     }
+
+//     const decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
+//     const user = await User.findById(decoded.id);
+
+//     if (!user || user.refreshToken !== tokenFromCookie) {
+//     //   throw new CustomError(403, "Invalid refresh token", "AuthorizationError");
+//      return res.status(403).json({ success: false, message: "Invalid or expired refresh token" });
+//     }
+
+//     // Rotate refresh token
+//     const newRefreshToken = jwt.sign({ id: user._id }, config.refresh_secret, { expiresIn: "7d" });
+//     user.refreshToken = newRefreshToken;
+//     await user.save();
+
+//     // Issue new access token
+//     const newAccessToken = jwt.sign(
+//       { id: user._id, role: user.role },
+//       config.jwt_secret,
+//       { expiresIn: "15m" }
+//     );
+
+//     // Send new refresh token cookie
+//     res.cookie("refreshToken", newRefreshToken, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === "production", // must be true on Render
+//       sameSite: "none", // 🔑 allow cross-domain
+//       maxAge: 7 * 24 * 60 * 60 * 1000,
+//     });
+
+//     res.status(200).json({
+//       success: true,
+//       accessToken: newAccessToken,
+//     });
+//   } catch (error) {
+//     return res.status(500).json({ success: false, message: "Internal server error" });
+//     // next(error);
+//   }
+// };
+
 const refreshToken = async (req, res, next) => {
   try {
     const tokenFromCookie = req.cookies.refreshToken;
     if (!tokenFromCookie) {
-    //   throw new CustomError(401, "No refresh token provided", "AuthorizationError");
-     return res.status(401).json({ success: false, message: "No refresh token provided" });
+      throw new CustomError(401, "No refresh token provided", "AuthorizationError");
     }
 
     const decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
     const user = await User.findById(decoded.id);
 
     if (!user || user.refreshToken !== tokenFromCookie) {
-    //   throw new CustomError(403, "Invalid refresh token", "AuthorizationError");
-     return res.status(403).json({ success: false, message: "Invalid or expired refresh token" });
+      throw new CustomError(403, "Invalid refresh token", "AuthorizationError");
     }
 
     // Rotate refresh token
@@ -499,8 +547,7 @@ const refreshToken = async (req, res, next) => {
       accessToken: newAccessToken,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Internal server error" });
-    // next(error);
+    next(error);
   }
 };
 
