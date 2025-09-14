@@ -519,7 +519,7 @@ const refreshToken = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded._id);
 
     if (!user || user.refreshToken !== tokenFromCookie) {
       return res.status(403).json({
