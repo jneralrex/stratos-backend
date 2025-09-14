@@ -512,18 +512,28 @@ const refreshToken = async (req, res, next) => {
   try {
     const tokenFromCookie = req.cookies.refreshToken;
     if (!tokenFromCookie) {
-      throw new CustomError(401, "No refresh token provided", "AuthorizationError");
+      return res.status(401).json({
+        success: false,
+        message: "No refresh token provided",
+      });
     }
 
     const decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
     const user = await User.findById(decoded.id);
 
     if (!user || user.refreshToken !== tokenFromCookie) {
-      throw new CustomError(403, "Invalid refresh token", "AuthorizationError");
+      return res.status(403).json({
+        success: false,
+        message: "Invalid or expired refresh token",
+      });
     }
 
     // Rotate refresh token
-    const newRefreshToken = jwt.sign({ id: user._id }, config.refresh_secret, { expiresIn: "7d" });
+    const newRefreshToken = jwt.sign(
+      { id: user._id },
+      config.refresh_secret,
+      { expiresIn: "7d" }
+    );
     user.refreshToken = newRefreshToken;
     await user.save();
 
@@ -538,11 +548,11 @@ const refreshToken = async (req, res, next) => {
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", // must be true on Render
-      sameSite: "none", // 🔑 allow cross-domain
+      sameSite: "none", // allow cross-domain
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       accessToken: newAccessToken,
     });
