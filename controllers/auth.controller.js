@@ -314,35 +314,32 @@ const resendOTP = async (req, res, next) => {
 const signIn = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
-      throw new CustomError(400, "Email and password are required", "ValidationError");
+      return res.status(400).json({ success: false, message: "Email and password are required" });
     }
 
     const user = await User.findOne({ email }).select("+password +refreshToken");
-    if (!user) throw new CustomError(404, "User not found", "ValidationError");
-    if (!user.isVerified) throw new CustomError(403, "Account not verified", "ValidationError");
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user.isVerified) return res.status(403).json({ success: false, message: "Account not verified" });
 
     const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) throw new CustomError(400, "Invalid credentials", "ValidationError");
+    if (!passwordMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
 
-    // Generate tokens
-    const accessToken = jwt.sign({ id: user._id }, config.jwt_secret, { expiresIn: "15m" });
+    // Tokens
+    const accessToken = jwt.sign({ id: user._id, role: user.role }, config.jwt_secret, { expiresIn: "15m" });
     const refreshToken = jwt.sign({ id: user._id }, config.refresh_secret, { expiresIn: "7d" });
 
-    // Save refresh token to DB
     user.refreshToken = refreshToken;
     await user.save();
 
-    // Send refresh token cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // must be true on Render
-      sameSite: "none", // 🔑 allow cross-domain (Vercel <-> Render)
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       accessToken,
       user: {
@@ -353,9 +350,10 @@ const signIn = async (req, res, next) => {
       },
     });
   } catch (error) {
-    next(error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
 
 
 /** ===========================
@@ -512,39 +510,22 @@ const refreshToken = async (req, res, next) => {
   try {
     const tokenFromCookie = req.cookies.refreshToken;
     if (!tokenFromCookie) {
-      return res.status(401).json({
-        success: false,
-        message: "No refresh token provided",
-      });
+      return res.status(401).json({ success: false, message: "No refresh token provided" });
     }
 
     const decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
-    const user = await User.findById(decoded._id);
+    const user = await User.findById(decoded.id); 
 
     if (!user || user.refreshToken !== tokenFromCookie) {
-      return res.status(403).json({
-        success: false,
-        message: "Invalid or expired refresh token",
-      });
+      return res.status(403).json({ success: false, message: "Invalid or expired refresh token" });
     }
 
-    // Rotate refresh token
-    const newRefreshToken = jwt.sign(
-      { id: user._id },
-      config.refresh_secret,
-      { expiresIn: "7d" }
-    );
+    const newRefreshToken = jwt.sign({ id: user._id }, config.refresh_secret, { expiresIn: "7d" });
     user.refreshToken = newRefreshToken;
     await user.save();
 
-    // Issue new access token
-    const newAccessToken = jwt.sign(
-      { id: user._id, role: user.role },
-      config.jwt_secret,
-      { expiresIn: "15m" }
-    );
+    const newAccessToken = jwt.sign({ id: user._id, role: user.role }, config.jwt_secret, { expiresIn: "15m" });
 
-    // Send new refresh token cookie
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -552,23 +533,15 @@ const refreshToken = async (req, res, next) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.status(200).json({
-      success: true,
-      accessToken: newAccessToken,
-    });
+    return res.status(200).json({ success: true, accessToken: newAccessToken });
   } catch (error) {
-    // handle jwt-specific errors
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({ success: false, message: "Refresh token expired" });
     }
-    if (error.name === "JsonWebTokenError") {
-      return res.status(403).json({ success: false, message: "Invalid refresh token" });
-    }
-
-    // fallback
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(403).json({ success: false, message: "Invalid refresh token" });
   }
 };
+
 
 
 
