@@ -8,35 +8,35 @@ const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
 const transactionRoutes = require("./routes/transaction.routes");
 const affiliateRoutes = require("./routes/affiliate.routes");
-
-
-
-
 const app = express();
 const port = config.port || 4000;
 
-//  Connect to Database
+
 connectDataBase();
 
 //  Middleware
-app.use(helmet()); // Adds security headers
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // Supports form submissions
-
-
-app.use(cors({ 
-    origin: ["http://localhost:3000", "https://stratoslab.vercel.app"], 
-    credentials: true 
-}));
 app.use(cookieParser());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true })); 
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",   
+      "https://stratoslab.vercel.app", 
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true, 
+  })
+);
+app.use(helmet()); 
+
 
 //  Routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/transactions", transactionRoutes);
 app.use("/api/v1/affiliate", affiliateRoutes);
-
-
 
 
 //  Global Error Handler
