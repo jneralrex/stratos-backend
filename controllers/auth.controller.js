@@ -300,6 +300,7 @@ const signIn = async (req, res) => {
       success: true,
       accessToken,
       user: {
+        id: user._id,
         username: user.username,
         email: user.email,
         role: user.role,
@@ -324,7 +325,7 @@ const refreshToken = async (req, res) => {
     }
 
     const decoded = jwt.verify(tokenFromCookie, config.refresh_secret);
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id).select("+refreshToken");
 
     if (!user || user.refreshToken !== tokenFromCookie) {
       return res.status(403).json({ success: false, message: "Invalid refresh token" });
@@ -335,7 +336,11 @@ const refreshToken = async (req, res) => {
     user.refreshToken = newRefreshToken;
     await user.save();
 
-    const newAccessToken = jwt.sign({ id: user._id, role: user.role }, config.jwt_secret, { expiresIn: "15m" });
+    const newAccessToken = jwt.sign(
+      { id: user._id, role: user.role },
+      config.jwt_secret,
+      { expiresIn: "15m" }
+    );
 
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
@@ -349,6 +354,7 @@ const refreshToken = async (req, res) => {
     return res.status(403).json({ success: false, message: "Invalid or expired refresh token" });
   }
 };
+
 
 
 /** ===========================
