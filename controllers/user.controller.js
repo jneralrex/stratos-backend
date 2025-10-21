@@ -43,7 +43,8 @@ const getUserById = async (req, res, next) => {
 
 const updateUser = async (req, res, next) => {
     try {
-        const user = await User.findById(req.params.id);
+        const userId = req.body._id
+        const user = await User.findById(userId);
         if (!user) {
             throw new CustomError(404, "User not found", "NotFoundError");
         }

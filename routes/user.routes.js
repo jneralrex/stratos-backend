@@ -7,7 +7,7 @@ const router = require("express").Router();
 
 router.get("/getAllUsers", authenticate, authorize("superAdmin"), getAllUsers); // Get all users with pagination
 router.get("/getUser/:id", getUserById); // Get user by ID
-router.patch("/updateUser/:id", updateUser); // Update user by ID
+router.patch("/updateUser", authenticate, updateUser); // Update user by ID
 router.post("/uploadprofilepic/:id", profileUpload.single("profilePics"), updateProfilePhoto);
 router.post("/rollback", rollBackImageWithErrors); // Rollback image with errors
 

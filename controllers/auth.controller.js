@@ -36,7 +36,7 @@ const signUp = async (req, res, next) => {
             email,
             password,
             course,
-            role // student | affiliate | salesRep | superAdmin
+            role,
         } = req.body;
 
         const referralCodeInput = req.query.ref || req.body.ref;
@@ -46,18 +46,18 @@ const signUp = async (req, res, next) => {
         const safeRole = allowedSignupRoles.has(role) ? role : "student";
 
 
-        // ✅ Check if user already exists (extra safety, but Mongo will also catch duplicates)
+        // Check if user already exists (extra safety, but Mongo will also catch duplicates)
         const existingUser = await User.findOne({ email }).exec();
         if (existingUser) {
             throw new CustomError(400, "User already exists", "ValidationError");
         }
 
-        // 📧 Email format
+        // Email format
         if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
             throw new CustomError(400, "Invalid email format", "ValidationError");
         }
 
-        // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char, and NO spaces
+        // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char, and NO spaces
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])\S{8,}$/;
 
         if (!passwordRegex.test(password)) {
@@ -69,14 +69,14 @@ const signUp = async (req, res, next) => {
         }
 
 
-        // ✅ Hash password
+        // Hash password
         const passwordHash = await bcrypt.hash(password, 10);
 
-        // ✅ Generate OTP
+        // Generate OTP
         const { otp, otpExpiresAt } = generateOTP();
         const hashedOTP = await bcrypt.hash(otp, 10);
 
-        // ✅ Look up referrer
+        // Look up referrer
         let referredBy = null;
         if (referralCodeInput) {
             const referrer = await User.findOne({ referralCode: referralCodeInput });
@@ -91,7 +91,7 @@ const signUp = async (req, res, next) => {
             throw new CustomError(400, "Students must select a course", "ValidationError");
         }
 
-        // ✅ Create user
+        // Create user
         const newUser = new User({
             fullName,
             phoneNumber,
@@ -109,7 +109,7 @@ const signUp = async (req, res, next) => {
 
         await newUser.save({ session });
 
-        // ✅ If referred, add this user to referrer’s referrals list
+        // If referred, add this user to referrer’s referrals list
         if (referredBy) {
             await User.findByIdAndUpdate(
                 referredBy,
@@ -121,14 +121,14 @@ const signUp = async (req, res, next) => {
         await session.commitTransaction();
         session.endSession();
 
-        // ✅ Send OTP
+        // Send OTP
         await sendEmail(
             email,
             "Your OTP Code",
             `Your OTP is: ${otp}. It expires in 10 minutes.`
         );
 
-        // ✅ Response: only affiliates get referralCode/refLink
+        // Response: only affiliates get referralCode/refLink
         const responseData = { email };
         if (newUser.role === "affiliate") {
             responseData.referralCode = newUser.referralCode;
@@ -145,7 +145,7 @@ const signUp = async (req, res, next) => {
         await session.abortTransaction();
         session.endSession();
 
-        // ✅ Handle duplicate key errors (MongoDB code 11000)
+        // Handle duplicate key errors (MongoDB code 11000)
         if (error.code === 11000) {
             const field = Object.keys(error.keyValue)[0];
             return next(new CustomError(400, `${field} already exists`, "ValidationError"));
@@ -412,7 +412,7 @@ const resetPassword = async (req, res, next) => {
             throw new CustomError(400, "OTP expired or invalid", "ValidationError");
         }
 
-        // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char, and NO spaces
+        // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char, and NO spaces
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])\S{8,}$/;
 
         if (!passwordRegex.test(newPassword)) {
@@ -463,7 +463,7 @@ const changePassword = async (req, res, next) => {
         if (!passwordMatch) throw new CustomError(400, "Old password is incorrect", "ValidationError");
 
 
-        // ✅ At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char, and NO spaces
+        // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special char, and NO spaces
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])\S{8,}$/;
 
         if (!passwordRegex.test(newPassword)) {

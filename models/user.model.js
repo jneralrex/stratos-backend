@@ -18,11 +18,41 @@ const userSchema = new mongoose.Schema(
       url: { type: String },
       public_id: { type: String },
     },
-    gender: { 
-      type: String, 
-      trim: true, 
-      lowercase: true, 
-      enum: ["male", "female"] 
+    gender: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      enum: ["male", "female"]
+    },
+    employmentStatus: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      enum: ["employed, unemployed, self-employed"]
+    },
+    freeTime: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      enum: ["morning, afternoon, evening"]
+    },
+    freeTimeRange: {
+      start: {
+        type: String,
+        trim: true,
+        validate: {
+          validator: v => /^([01]\d|2[0-3]):([0-5]\d)$/.test(v),
+          message: "Invalid start time format (expected HH:mm)"
+        }
+      },
+      end: {
+        type: String,
+        trim: true,
+        validate: {
+          validator: v => /^([01]\d|2[0-3]):([0-5]\d)$/.test(v),
+          message: "Invalid end time format (expected HH:mm)"
+        }
+      },
     },
     dateOfBirth: {
       type: Date,
@@ -45,25 +75,25 @@ const userSchema = new mongoose.Schema(
       enum: ["student", "affiliate", "salesRep", "superAdmin"],
       default: "student",
     },
- course: {
-    type: String,
-    validate: {
-      validator: function (v) {
-        // Only students must have a course
-        if (this.role === "student") return typeof v === "string" && v.trim().length > 0;
-        return true;
+    course: {
+      type: String,
+      validate: {
+        validator: function (v) {
+          // Only students must have a course
+          if (this.role === "student") return typeof v === "string" && v.trim().length > 0;
+          return true;
+        },
+        message: "Students must select a course",
       },
-      message: "Students must select a course",
     },
-  },
     commissions: {
       totalEarned: { type: Number, default: 0 },
       pending: { type: Number, default: 0 },
       paidOut: { type: Number, default: 0 },
     },
 
-    // ✅ Referral system
-    referrals: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], 
+    // Referral system
+    referrals: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     referralCode: { type: String, unique: true, sparse: true }, // main referral code
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
@@ -72,18 +102,19 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ Auto set `isProfileComplete`
+// Auto set `isProfileComplete`
 userSchema.pre("save", function (next) {
   this.isProfileComplete =
     !!this.username &&
     !!this.email &&
     !!this.profilePics?.url &&
     !!this.gender &&
+    !!this.employmentStatus &&
     !!this.dateOfBirth;
   next();
 });
 
-// ✅ Generate referral code if missing (only for affiliates)
+// Generate referral code if missing (only for affiliates)
 userSchema.pre("save", function (next) {
   if (this.role === "affiliate" && !this.referralCode) {
     this.referralCode = crypto.randomBytes(4).toString("hex");
@@ -91,13 +122,13 @@ userSchema.pre("save", function (next) {
 
   // Ensure non-affiliates never keep referral codes
   if (this.role !== "affiliate") {
-    this.referralCode = undefined;  // ✅ remove field entirely
+    this.referralCode = undefined;  // remove field entirely
   }
 
   next();
 });
 
-// 🌍 Virtual field for referral link (only for affiliates)
+// Virtual field for referral link (only for affiliates)
 userSchema.virtual("refLink").get(function () {
   if (this.role !== "affiliate" || !this.referralCode) return null;
   return `${process.env.FRONTEND_URL}/stratuslab/courses/register?ref=${this.referralCode}`;
