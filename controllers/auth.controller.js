@@ -305,6 +305,7 @@ const signIn = async (req, res) => {
         email: user.email,
         role: user.role,
         refLink: user.refLink,
+        isProfileComplete: user.isProfileComplete
       },
     });
   } catch (error) {
