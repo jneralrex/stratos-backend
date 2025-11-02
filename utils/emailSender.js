@@ -58,9 +58,9 @@ const transporter = nodemailer.createTransport({
 // Optional: verify SMTP connection on startup
 transporter.verify((error, success) => {
   if (error) {
-    console.error("❌ Gmail SMTP connection failed:", error.message);
+    console.error("Gmail SMTP connection failed:", error.message);
   } else {
-    console.log("✅ Gmail SMTP connection successful!");
+    console.log("Gmail SMTP connection successful!");
   }
 });
 
