@@ -29,6 +29,7 @@ app.use(
     origin: [
       "http://localhost:3000",   
       "https://stratoslab.vercel.app", 
+      "https://www.trustedtek.org"
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

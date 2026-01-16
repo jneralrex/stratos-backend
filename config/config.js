@@ -8,6 +8,7 @@ jwt_secret: process.env.JWT_SECRET,
 refresh_secret: process.env.REFRESH_SECRET,
 email_password: process.env.EMAIL_PASSWORD,
 email: process.env.EMAIL,
+contact_email: process.env.CONTACT_EMAIL,
 }
 
 cloudinary.config({
