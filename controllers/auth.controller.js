@@ -122,11 +122,13 @@ const signUp = async (req, res, next) => {
         session.endSession();
 
         // Send OTP
-        await sendEmail(
+        const emailResponse = await sendEmail(
             email,
             "Your OTP Code",
             `Your OTP is: ${otp}. It expires in 10 minutes.`
         );
+
+        console.log("sendEmail response:", JSON.stringify(emailResponse, null, 2));
 
         // Response: only affiliates get referralCode/refLink
         const responseData = { email };
@@ -304,6 +306,8 @@ const signIn = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        course: user.course,
+        referralCode: user.referralCode,
         refLink: user.refLink,
         isProfileComplete: user.isProfileComplete
       },
