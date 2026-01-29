@@ -157,7 +157,7 @@ const sendEmail = async (email, subject, message) => {
 
     // 3. Send the email using the Resend API
     const { data, error } = await resend.emails.send({
-      from: `"Trustedtek No-Reply" <mail.trustedtek.org>`, // Use your new verified subdomain
+      from: `"Trustedtek No-Reply" <mail.trustedtek.org@mail.trustedtek.org>`, // Use your new verified subdomain
       to: [email], // Resend requires an array for 'to'
       subject: subject,
       html: htmlContent,
