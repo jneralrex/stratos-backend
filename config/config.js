@@ -8,6 +8,7 @@ refresh_secret: process.env.REFRESH_SECRET,
 email_password: process.env.EMAIL_PASSWORD,
 email: process.env.EMAIL,
 contact_email: process.env.CONTACT_EMAIL,
+resend_api_key: process.env.RESEND_API_KEY,
 }
 
 cloudinary.config({
